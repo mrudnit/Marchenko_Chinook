@@ -64,12 +64,12 @@ _Tento proces pozostával z 3 krokov extrakcie, konverzie a načítania. Celý t
 
 ### **3.1 Preberanie údajov na prácu**
 _Počiatočné tabuľky vo formáte .csv sme načítali do programu <ins>Snowflake</ins>, aby sme s nimi mohli ďalej pracovať. Na tento účel sme vytvorili scénu my_stage. Jej účelom je dočasne uložiť súbory na import a export._
-```
+```sql
 CREATE OR REPLACE STAGE my_stage;
 ```
 _Formát tabuľky sme potom vytvorili ručne so všetkými nastaveniami a podmienkami._
 Príklad:
-```
+```sql
 CREATE TABLE customer_staging (
     CustomerId INT PRIMARY KEY,
     FirstName VARCHAR(40) NOT NULL,
@@ -89,7 +89,7 @@ CREATE TABLE customer_staging (
 
 ```
 _V každej šablóne, ktorú sme vytvorili v programe Snowflake, boli do scény načítané dočasné tabuľky, kód:_
-```
+```sql
 COPY INTO customer_staging
 FROM @my_stage/Customer.csv
 FILE_FORMAT = (TYPE = 'CSV' FIELD_OPTIONALLY_ENCLOSED_BY = '"' SKIP_HEADER = 1);
@@ -101,7 +101,7 @@ Ak sa vyskytli chyby pri rozpoznávaní údajov, bol zapísaný príkaz ON_ERROR
 _Hlavným cieľom je pripraviť tabuľky faktov a meraní, ktoré sa budú ďalej používať pri efektívnych analýzach._
 
 _Tabuľka <sup>dim_track</sup>, ktorá obsahuje údaje o skladbe: názov, skladateľ, dĺžka skladby, UnitPrice, bola tiež zlúčená a prevzatá z ďalších tabuliek (Žáner, Zoznam skladieb, Album, Umelec, Skladateľ), aby sa uľahčilo prepojenie tabuliek, ktorých atribúty sa vzťahujú na <ins>SCD 0</ins>. Pre lepšiu distribúciu bolo pridané oddelenie medzi lacnou skladbou drahou a štandardnou, ako aj uľahčenie pomocou žánru „TV“ alebo „Hudba“._
-```
+```sql
 CREATE TABLE dim_track AS
 SELECT DISTINCT
     t.TrackId AS dim_trackId,
@@ -124,7 +124,7 @@ JOIN album_staging a ON t.AlbumId = a.AlbumId
 JOIN mediatype_staging m ON t.MediaTypeId = m.MediaTypeId;
 ```
 _Údaje o meraní sú typu <ins>SCD 0</ins>, pretože čas bol prevzatý z InvoiceDate, čo je čas nákupu, ktorý nemožno zmeniť. Pre zjednodušenie bolo pridané , ak je noc, potom <ins> „PM“ </ins>, inak <ins> „AM“ </ins>._
-```
+```sql
 CREATE TABLE dim_time AS
 SELECT DISTINCT
     ROW_NUMBER() OVER (ORDER BY DATE_TRUNC('HOUR', InvoiceDate)) AS dim_timeID, 
@@ -144,7 +144,7 @@ FROM invoice_staging
 GROUP BY InvoiceDate;
 ```
 _Dimenzia <sup>dim_date</sup> uchováva údaje o dátume (rok, mesiac, týždeň, deň, štvrťrok) Pre ľahšie pochopenie boli pridané aj faktory ako fulldate vo formáte RRRR-MM-DD. Dimenzia patrí do klasifikácie aj <ins>SCD 0</ins>, pretože tu je pevne stanovený dátum nákupu, ktorý sa nemení._
-```
+```sql
 CREATE TABLE dim_date AS
 SELECT
     ROW_NUMBER() OVER (ORDER BY CAST(InvoiceDate AS DATE)) AS dim_dateID, 
@@ -186,7 +186,7 @@ GROUP BY CAST(InvoiceDate AS DATE),
          DATE_PART('quarter', InvoiceDate);
 ```
 _Hlavnou tabuľkou tejto schémy je <sup>fact_invoiceline</sup>, ktorá obsahuje množstvo a cenu za kus._
-```
+```sql
 CREATE TABLE fact_invoiceline AS
 SELECT 
     il.InvoiceLineId AS fact_invoicelineId,
@@ -208,7 +208,7 @@ JOIN dim_track tr ON il.TrackId = tr.dim_trackId;
 ### **3.3 Odstránenie dočasných tabuliek**
 
 _Pri vytváraní tabuliek STAR, ich vzájomného vzťahu, informácií, ktoré boli prevzaté z dočasných tabuliek. Tieto tabuľky môžeme vymazať, aby sme urýchlili ukladanie bez dodatočného zaťažovania nezmyselných súborov v tejto fáze._
-```
+```sql
 DROP TABLE IF EXISTS artist_staging;
 DROP TABLE IF EXISTS genre_staging;
 DROP TABLE IF EXISTS mediatype_staging;
@@ -218,7 +218,78 @@ atď.
 ```
 _Na záver môžeme povedať, že proces ETL nám umožnil spracovať údaje z tabuľky .csv prostredníctvom dočasných tabuliek, ktoré sme vytvorili počas vykonanej práce. Vytvoriť štruktúrovanejšiu pre analýzu schému modelu Star. Analyzovať nákupy používateľov, sumy výdavkov a dátumy transakcií._
 ___
+## **4.Vizualizácia údajov**
 
+_V tejto časti sa uvádza 5 hlavných analýz, ktoré slúžia na všeobecnú kontrolu tohto projektu. Väčšina z nich súvisí so štatistikami predaja (kedy, kde a čo presne?)._
+
+<p align="center">
+  <img src="">
+  <br>
+</p>
+
+---
+### **GRAF 1 "Average sum of buying track in company"**
+
+_Táto vizualizácia zobrazuje hodnotu spoločností vo vzťahu k hudbe ich nákladov. Tento graf vám pomôže naznačiť, ktorú spoločnosť môžete osloviť s požiadavkou na predaj alebo vytvoriť stratégiu na zvýšenie objemu a zamerať sa na týchto zákazníkov vo vzťahu k analýze. Spoločnosť "JetBrains s.r.o." je teraz lídrom v tejto oblasti._
+```sql
+SELECT c.Company AS Customer, AVG (i.total) AS Average
+FROM fact_invoiceline il
+JOIN dim_customer c ON il.customerId = c.dim_customerId
+JOIN dim_invoice i ON il.invoiceId = i.dim_invoiceId
+GROUP BY c.Company 
+ORDER BY Average DESC
+LIMIT 10;
+```
+---
+### **GRAF 2 "Favored media types"**
+_Táto vizualizácia zobrazuje záujem zákazníkov o konkrétny typ médií. Môže byť užitočná na to, aby ľudia pochopili, ktorý typ médií je momentálne obľúbený. Lídrom je momentálne zvukový súbor "MPEG" s počtom 687 000 vydaných zvukových súborov_
+```sql
+SELECT t.MediaType AS MediaType, COUNT(t.dim_trackId) AS TotalTrack
+FROM fact_invoiceline il
+JOIN dim_track t ON il.trackId = t.dim_trackId
+GROUP BY MediaType
+ORDER BY TotalTrack DESC;
+```
+---
+### **GRAF 3 "Sales seasonality"**
+_Táto tabuľka pomáha určiť sezónnosť tratí. Momentálne najlepší výsledok bol 22. januára, ale ostatné výsledky v hornej časti po januári sú všetky z teplejších ročných období. Pomôže vám to pochopiť, v ktorom období sa predával najlepšie a ako sa táto úroveň udrží do budúcnosti. Prečo som použil <sup>SUM(il.Quantity * il.UnitPrice)</sup>, pretože to je presne celková suma predaja vzhľadom na množstvo a cenu. Takéto <sup>SUM(il.Quantity), SUM(i.Total)</sup> nie sú vhodné, pretože je potrebné to konkretizovať._
+```sql
+SELECT d.Year AS Year, d.Month AS Mounth, SUM(il.UnitPrice*il.Quantity) AS TotalSales
+FROM fact_invoiceline il
+JOIN dim_date d ON il.dateid = d.dim_dateId
+GROUP BY d.Year, d.Month
+ORDER BY TotalSales DESC
+LIMIT 100;
+```
+---
+### **GRAF 4 "Geographically the best selling point"**
+_Graf ukazuje, v ktorých krajinách je o skladby najväčší záujem a kde sa ich kúpilo viac. To pomôže marketérom pochopiť, na ktorú skupinu ľudí, na ktorú národnosť sa majú zamerať, aby získali viac predaja._
+```sql
+SELECT a.Country AS Country, SUM(il.Quantity) AS TrackSold
+FROM fact_invoiceline il
+JOIN dim_address a ON il.addressId = a.dim_addressId
+GROUP BY a.Country
+ORDER BY TrackSold DESC
+LIMIT 5;
+```
+---
+### **GRAF 5 "Most sales Track"**
+
+_Tento graf zobrazuje 10 najpredávanejších skladieb. "The Trooper" V súčasnosti je najobľúbenejší. Vďaka tomu môžete určiť, ktoré skladby sú momentálne v kurze, čo je dôležité z marketingového hľadiska pre popularizáciu tohto typu hudby._
+```sql
+SELECT t.Name AS Track, SUM(il.Quantity) AS TotalSold
+FROM fact_invoiceline il
+JOIN dim_track t ON il.trackId = t.dim_trackId
+GROUP BY t.Name 
+ORDER BY TotalSold DESC
+LIMIT 10;
+```
+
+---
+
+_Vizualizácia môže pomôcť stručne vysvetliť človeku otázky, ktoré sú pre neho dôležité, a odhaliť jeho otázku pomocou kresby._
+
+**Author:** Maksym Marchenko
 
 
 
