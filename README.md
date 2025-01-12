@@ -223,7 +223,7 @@ ___
 _V tejto časti sa uvádza 5 hlavných analýz, ktoré slúžia na všeobecnú kontrolu tohto projektu. Väčšina z nich súvisí so štatistikami predaja (kedy, kde a čo presne?)._
 
 <p align="center">
-  <img src="">
+  <img src="https://github.com/mrudnit/Marchenko_Chinook/blob/main/Chinook_Dashboard.jpg">
   <br>
 </p>
 
@@ -265,12 +265,11 @@ LIMIT 100;
 ### **GRAF 4 "Geographically the best selling point"**
 _Graf ukazuje, v ktorých krajinách je o skladby najväčší záujem a kde sa ich kúpilo viac. To pomôže marketérom pochopiť, na ktorú skupinu ľudí, na ktorú národnosť sa majú zamerať, aby získali viac predaja._
 ```sql
-SELECT a.Country AS Country, SUM(il.Quantity) AS TrackSold
+SELECT d.Year AS Year, d.Month AS Month, SUM(il.UnitPrice * il.Quantity) AS TotalSales
 FROM fact_invoiceline il
-JOIN dim_address a ON il.addressId = a.dim_addressId
-GROUP BY a.Country
-ORDER BY TrackSold DESC
-LIMIT 5;
+JOIN dim_date d ON il.dateId = d.dim_dateId
+GROUP BY d.Year, d.Month
+ORDER BY d.Year, d.Month;
 ```
 ---
 ### **GRAF 5 "Most sales Track"**
