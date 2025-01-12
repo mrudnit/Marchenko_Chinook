@@ -51,7 +51,7 @@ _V spodnej časti bude schéma, kde hlavnou tabuľkou faktov bude fact_invoiceli
 ~ dim_adress : Presná adresa nákupu
 ```
 <p align="center">
-  <img src="" alt="Star Schema">
+  <img src="https://github.com/mrudnit/Marchenko_Chinook/blob/main/Chinook_STAR.jpg" alt="Star Schema">
   <br>
 </p>
 
@@ -97,9 +97,10 @@ atď.
 ```
 Ak sa vyskytli chyby pri rozpoznávaní údajov, bol zapísaný príkaz ON_ERROR = „CONTINUE“.
 ### 3.2 **Transformácia a vytváranie tabuliek**
-_Hlavným cieľom je pripraviť tabuľky faktov a meraní, ktoré sa budú ďalej používať pri efektívnych analýzach.
 
-Tabuľka <sup>dim_track</sup>, ktorá obsahuje údaje o skladbe: názov, skladateľ, dĺžka skladby, UnitPrice, bola tiež zlúčená a prevzatá z ďalších tabuliek (Žáner, Zoznam skladieb, Album, Umelec, Skladateľ), aby sa uľahčilo prepojenie tabuliek, ktorých atribúty sa vzťahujú na <ins>SCD 0</ins>. Pre lepšiu distribúciu bolo pridané oddelenie medzi lacnou skladbou drahou a štandardnou, ako aj uľahčenie pomocou žánru „TV“ alebo „Hudba“._
+_Hlavným cieľom je pripraviť tabuľky faktov a meraní, ktoré sa budú ďalej používať pri efektívnych analýzach._
+
+_Tabuľka <sup>dim_track</sup>, ktorá obsahuje údaje o skladbe: názov, skladateľ, dĺžka skladby, UnitPrice, bola tiež zlúčená a prevzatá z ďalších tabuliek (Žáner, Zoznam skladieb, Album, Umelec, Skladateľ), aby sa uľahčilo prepojenie tabuliek, ktorých atribúty sa vzťahujú na <ins>SCD 0</ins>. Pre lepšiu distribúciu bolo pridané oddelenie medzi lacnou skladbou drahou a štandardnou, ako aj uľahčenie pomocou žánru „TV“ alebo „Hudba“._
 ```
 CREATE TABLE dim_track AS
 SELECT DISTINCT
@@ -122,7 +123,7 @@ JOIN genre_staging g ON t.GenreId = g.GenreId
 JOIN album_staging a ON t.AlbumId = a.AlbumId
 JOIN mediatype_staging m ON t.MediaTypeId = m.MediaTypeId;
 ```
-_Údaje o meraní sú typu <ins>SCD 0</ins>, pretože čas bol prevzatý z InvoiceDate, čo je čas nákupu, ktorý nemožno zmeniť. Pre zjednodušenie bolo pridané , ak je noc, potom <ins>„PM“</ins>, inak <ins>„AM“</ins>._
+_Údaje o meraní sú typu <ins>SCD 0</ins>, pretože čas bol prevzatý z InvoiceDate, čo je čas nákupu, ktorý nemožno zmeniť. Pre zjednodušenie bolo pridané , ak je noc, potom <ins> „PM“ </ins>, inak <ins> „AM“ </ins>._
 ```
 CREATE TABLE dim_time AS
 SELECT DISTINCT
@@ -205,6 +206,7 @@ JOIN dim_address a ON il.InvoiceId = a.dim_addressId
 JOIN dim_track tr ON il.TrackId = tr.dim_trackId;
 ```
 ### **3.3 Odstránenie dočasných tabuliek**
+
 _Pri vytváraní tabuliek STAR, ich vzájomného vzťahu, informácií, ktoré boli prevzaté z dočasných tabuliek. Tieto tabuľky môžeme vymazať, aby sme urýchlili ukladanie bez dodatočného zaťažovania nezmyselných súborov v tejto fáze._
 ```
 DROP TABLE IF EXISTS artist_staging;
