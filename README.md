@@ -5,10 +5,10 @@ _Toto úložisko obsahuje informácie a výsledky z procesu ETL v spoločnosti <
 ---
 ## **1. Práca so surovými údajmi**
 _Východiskovými údajmi sú typy hudby, ich predaj a informácie o kupujúcich a pracovníkoch. Čo nám pomáha zistiť obľúbenejšie žánre relevantné pre krajinu, záujem používateľov o ne a ďalšie informácie o nákupoch (kedy a kde). 
-Surové údaje boli prevzaté z otvoreného prístupu „“, ktoré sú k dispozícii na prezeranie tu._
+Surové údaje boli prevzaté z otvoreného prístupu „lerocha“, ktoré sú k dispozícii na prezeranie [tu](https://github.com/lerocha/chinook-database/tree/master)._
 
-Údaje, ktoré boli získané, obsahujú 11 tabuliek:
-Hlavné z nich sú  v analýze:
+_Údaje, ktoré boli získané, obsahujú 11 tabuliek:_
+_Hlavné z nich sú  v analýze:_
 ```
 ~ Invoice
 ~ InvoiceLine
@@ -16,7 +16,7 @@ Hlavné z nich sú  v analýze:
 ~ Customer
 ~ Employee
 ```
-Pomocné údaje pre jasnejšie informácie:
+_Pomocné údaje pre jasnejšie informácie:_
 ```
 ~ Album
 ~ Artist
@@ -27,7 +27,7 @@ Pomocné údaje pre jasnejšie informácie:
 ```
 _Hlavným cieľom bolo transformovať a sprístupniť tieto údaje na rôzne analýzy_
 ___
-### **Architektúra údajov**
+### **1.1. Architektúra údajov**
 
 ### **Schéma ERD**
 
@@ -41,7 +41,7 @@ _Nespracované údaje v relačnom modeli, ktoré sa zobrazujú pomocou Schéma v
 
 ---
 ## **2. Schéma STAR**
-_V spodnej časti bude schéma, kde hlavnou tabuľkou faktov bude fact_invoiceline, ktorá bude prepojená :_
+_V spodnej časti bude schéma, kde hlavnou tabuľkou faktov bude fact_invoiceline, ktorá bude prepojená:_
 ```
 ~ dim_track : Tabuľka spájajúca všetky tabuľky týkajúce sa skladieb naraz s podrobnými informáciami
 ~ dim_invoice : Informácie o výške nákupu používateľa
