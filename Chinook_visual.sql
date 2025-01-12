@@ -15,12 +15,11 @@ GROUP BY MediaType
 ORDER BY TotalTrack DESC;
 
 -- Sales seasonality
-SELECT d.Year AS Year, d.Month AS Mounth, SUM(il.UnitPrice*il.Quantity) AS TotalSales
+SELECT d.Year AS Year, d.Month AS Month, SUM(il.UnitPrice * il.Quantity) AS TotalSales
 FROM fact_invoiceline il
-JOIN dim_date d ON il.dateid = d.dim_dateId
+JOIN dim_date d ON il.dateId = d.dim_dateId
 GROUP BY d.Year, d.Month
-ORDER BY TotalSales DESC
-LIMIT 100;
+ORDER BY d.Year, d.Month;
 
 -- Geographically the best selling point
 SELECT a.Country AS Country, SUM(il.Quantity) AS TrackSold
